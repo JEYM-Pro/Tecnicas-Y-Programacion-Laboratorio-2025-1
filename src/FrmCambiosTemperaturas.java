@@ -7,6 +7,8 @@ import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.Comparator;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
@@ -15,6 +17,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
@@ -70,6 +73,16 @@ public class FrmCambiosTemperaturas extends JFrame {
         });
         tb.add(btnCalcularEstadisticas);
 
+        JButton btnExtremosCalor = new JButton();
+        btnExtremosCalor.setIcon(new ImageIcon(getClass().getResource("/iconos/Calor.png"))); // Usa un ícono adecuado
+        btnExtremosCalor.setToolTipText("Ciudad más calurosa y menos calurosa para una fecha");
+        btnExtremosCalor.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                btnExtremosCalorClick();
+            }
+        });
+        tb.add(btnExtremosCalor);
+
         JPanel pnlCiudades = new JPanel();
         pnlCiudades.setLayout(new BoxLayout(pnlCiudades, BoxLayout.Y_AXIS));
 
@@ -110,6 +123,8 @@ public class FrmCambiosTemperaturas extends JFrame {
         getContentPane().add(pnlCiudades, BorderLayout.CENTER);
 
         cargarDatos();
+
+        setLocationRelativeTo(null);
     }
 
     private void cargarDatos() {
@@ -151,6 +166,8 @@ public class FrmCambiosTemperaturas extends JFrame {
             pnlGrafica.setLayout(new BorderLayout());
             pnlGrafica.add(pnlGraficador, BorderLayout.CENTER);
             pnlGrafica.revalidate();
+
+            pack();
         }
     }
 
@@ -178,4 +195,34 @@ public class FrmCambiosTemperaturas extends JFrame {
             pnlEstadisticas.revalidate();
         }
     }
+
+private void btnExtremosCalorClick() {
+    LocalDate fechaSeleccionada = dccDesde.getSelectedDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+
+    var datosFiltrados = datos.stream()
+            .filter(dato -> dato.getFecha().equals(fechaSeleccionada))
+            .collect(Collectors.toList());
+
+    if (datosFiltrados.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "No hay datos para la fecha seleccionada.", "Información", JOptionPane.INFORMATION_MESSAGE);
+        return;
+    }
+
+    var ciudadMasCalurosa = datosFiltrados.stream()
+            .max(Comparator.comparing(CambioGrado::getCambio))
+            .orElse(null);
+
+    var ciudadMenosCalurosa = datosFiltrados.stream()
+            .min(Comparator.comparing(CambioGrado::getCambio))
+            .orElse(null);
+
+    String mensaje = String.format(
+            "Fecha: %s\nCiudad más calurosa: %s (%.2f°C)\nCiudad menos calurosa: %s (%.2f°C)",
+            fechaSeleccionada,
+            ciudadMasCalurosa.getCiudad(), ciudadMasCalurosa.getCambio(),
+            ciudadMenosCalurosa.getCiudad(), ciudadMenosCalurosa.getCambio()
+    );
+
+    JOptionPane.showMessageDialog(this, mensaje, "Resultados", JOptionPane.INFORMATION_MESSAGE);
+}
 }
